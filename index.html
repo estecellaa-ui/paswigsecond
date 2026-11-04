@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Paswig English — your AI English tutor</title>
+<style>
+:root{--bg:#0f1020;--card:#1a1b33;--c2:#232445;--tx:#ecebff;--mu:#9a9bc4;--ac:#8b7bff;--ac2:#5ec4ff;--ok:#4ade80;--bad:#fb7185;--bd:#2f3058}
+[data-theme=light]{--bg:#f4f3ff;--card:#fff;--c2:#ece9ff;--tx:#1d1b3a;--mu:#6b6a93;--bd:#ddd9f7}
+*{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,Segoe UI,sans-serif;background:var(--bg);color:var(--tx)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;border-radius:12px;padding:9px 15px;background:var(--c2);transition:.15s}
+button:hover{transform:translateY(-1px)}button:disabled{opacity:.5;cursor:default;transform:none}
+.pri{background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;font-weight:600}
+input,select,textarea{background:var(--c2);border:1px solid var(--bd);border-radius:12px;padding:10px 12px;width:100%}
+#app{display:flex;min-height:100vh}nav{width:210px;padding:18px 12px;background:var(--card);border-right:1px solid var(--bd);position:sticky;top:0;height:100vh;flex-shrink:0}
+nav h1{font-size:19px;margin:4px 8px 16px;background:linear-gradient(135deg,var(--ac),var(--ac2));-webkit-background-clip:text;color:transparent}
+nav button{display:block;width:100%;text-align:left;background:none;margin-bottom:2px}nav button.on{background:var(--c2);color:var(--ac2);font-weight:600}
+main{flex:1;padding:24px;max-width:1000px;margin:auto;width:100%;animation:in .3s}@keyframes in{from{opacity:0;transform:translateY(8px)}}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:18px;padding:18px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.stat b{display:block;font-size:26px}.mu{color:var(--mu);font-size:13px}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.bar{height:9px;background:var(--c2);border-radius:9px;overflow:hidden}.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--ac),var(--ac2));transition:width .6s}
+.tag{background:var(--c2);padding:3px 10px;border-radius:99px;font-size:12px;color:var(--ac2)}
+.clk{cursor:pointer}.clk:hover{border-color:var(--ac)}
+#chat{height:52vh;overflow:auto;padding:6px}.m{max-width:85%;padding:10px 14px;border-radius:16px;margin:8px 0;white-space:pre-wrap;animation:in .25s}
+.m.u{background:linear-gradient(135deg,var(--ac),#6a8cff);color:#fff;margin-left:auto;border-bottom-right-radius:4px}.m.a{background:var(--c2);border-bottom-left-radius:4px}
+.fix{background:var(--card);border:1px solid var(--bd);border-left:3px solid var(--ok);border-radius:12px;padding:10px;margin:4px 0 8px;font-size:14px;max-width:85%;margin-left:auto}
+.ok{color:var(--ok)}.bad{color:var(--bad)}.opt{display:block;width:100%;text-align:left;margin:6px 0;border:1px solid var(--bd)}
+.opt.right{border-color:var(--ok);background:rgba(74,222,128,.15)}.opt.wrong{border-color:var(--bad);background:rgba(251,113,133,.15)}
+.chip.on{background:var(--ac);color:#fff}.fc{min-height:180px;display:flex;flex-direction:column;justify-content:center;text-align:center;font-size:20px;cursor:pointer}
+.ov{position:fixed;inset:0;background:var(--bg);z-index:9;overflow:auto;display:flex;align-items:center;justify-content:center;padding:16px}
+.ov>div{max-width:520px;width:100%}.banner{background:rgba(251,113,133,.15);border:1px solid var(--bad);padding:10px 14px;border-radius:12px;margin-bottom:12px}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--mu);border-top-color:var(--ac2);border-radius:50%;animation:r .7s linear infinite;vertical-align:middle}@keyframes r{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--ac);color:#fff;padding:9px 18px;border-radius:99px;z-index:20;animation:in .3s}
+.bars{display:flex;gap:8px;align-items:flex-end;height:90px}.bars div{flex:1;text-align:center;font-size:11px}.bars i{display:block;background:linear-gradient(var(--ac2),var(--ac));border-radius:6px 6px 0 0;min-height:3px}
+@media(max-width:720px){#app{flex-direction:column}nav{position:fixed;bottom:0;top:auto;width:100%;height:auto;display:flex;overflow-x:auto;z-index:8;border-top:1px solid var(--bd);border-right:0;padding:6px}nav h1{display:none}nav button{width:auto;white-space:nowrap;font-size:13px;padding:8px 10px}main{padding:14px 12px 80px}.m{max-width:94%}}
+</style></head><body>
+<div id="app"><nav id="nav"></nav><main id="main"></main></div><div id="ov"></div>
+<script>
+const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LV=['A1','A2','B1','B2','C1'],LVN={A1:'Beginner',A2:'Elementary',B1:'Intermediate',B2:'Upper Intermediate',C1:'Advanced'};
+const today=(o=0)=>{const d=new Date(Date.now()+o*864e5);return d.toISOString().slice(0,10)};
+const SEED=[{word:'exhausted',meaning:'sangat lelah',pron:'/ɪɡˈzɔː.stɪd/',example:'I was exhausted after the trip.',example_id:'Aku sangat lelah setelah perjalanan.',synonyms:['worn out'],antonyms:['energetic'],formality:'neutral',context:'Lebih kuat dari "tired".'},{word:'hang out',meaning:'nongkrong',pron:'/hæŋ aʊt/',example:'Let\'s hang out this weekend.',example_id:'Ayo nongkrong akhir pekan ini.',synonyms:['chill'],antonyms:[],formality:'informal',context:'Santai dengan teman.'},{word:'appreciate',meaning:'menghargai / berterima kasih',pron:'/əˈpriː.ʃi.eɪt/',example:'I really appreciate your help.',example_id:'Aku sangat menghargai bantuanmu.',synonyms:['value'],antonyms:[],formality:'neutral',context:'Sopan untuk berterima kasih.'},{word:'figure out',meaning:'mencari tahu / memecahkan',pron:'/ˈfɪɡ.jər aʊt/',example:'I can\'t figure out this problem.',example_id:'Aku tidak bisa memecahkan masalah ini.',synonyms:['work out'],antonyms:[],formality:'informal',context:'Phrasal verb umum.'},{word:'deadline',meaning:'tenggat waktu',pron:'/ˈded.laɪn/',example:'The deadline is Friday.',example_id:'Tenggatnya hari Jumat.',synonyms:[],antonyms:[],formality:'neutral',context:'Kuliah & kerja.'},{word:'no cap',meaning:'serius / tidak bohong',pron:'/noʊ kæp/',example:'That movie was amazing, no cap.',example_id:'Filmnya keren banget, serius.',synonyms:['for real'],antonyms:[],formality:'slang',context:'Slang internet.'}];
+const DEF={profile:null,set:{theme:'dark',explain:'id',style:'friendly',corr:'instant',speed:1},xp:0,streak:0,last:null,days:{},words:SEED.map(w=>({...w,box:1,due:today()})),quiz:{done:0,right:0,byType:{}},gram:{c:0,t:0,topics:{}},history:[],learnedTopics:{}};
+let S=Object.assign(structuredClone(DEF),JSON.parse(localStorage.getItem('paswig_v1')||'{}'));
+const save=()=>localStorage.setItem('paswig_v1',JSON.stringify(S));
+let view='dash',AI={ready:false},chat=null,busy=false;
+function toast(t){const e=document.createElement('div');e.className='toast';e.textContent=t;document.body.append(e);setTimeout(()=>e.remove(),2200)}
+function act(xp=0){const t=today();S.days[t]=S.days[t]||{xp:0,min:0};S.days[t].xp+=xp;S.xp+=xp;
+ if(S.last!==t){S.streak=S.last===today(-1)?S.streak+1:1;S.last=t}save()}
+setInterval(()=>{if(document.hidden||!S.profile)return;const t=today();S.days[t]=S.days[t]||{xp:0,min:0};S.days[t].min+=.5;save()},30000);
+const lvl=()=>Math.floor(S.xp/200)+1,sumMin=()=>Math.round(Object.values(S.days).reduce((a,d)=>a+d.min,0));
+async function api(path,body){let r;try{r=await fetch(path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)})}catch{throw new Error('Cannot reach the server. Is it running? / Server tidak terjangkau.')}
+ const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Request failed ('+r.status+')');return d}
+const gen=(task,params)=>api('/api/generate',{task,params:{level:S.profile.level,...params}});
+const err=m=>`<div class="banner">⚠️ ${esc(m)}</div>`,load=t=>`<div class="mu"><span class="spin"></span> ${t||'Thinking…'}</div>`;
+
+// ---------- Voice (Web Speech API, browser built-in) ----------
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+function speak(t,rate){if(!('speechSynthesis' in window))return toast('Text-to-speech not supported in this browser');speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='en-US';u.rate=rate||S.set.speed;speechSynthesis.speak(u)}
+function listen(cb,btn){if(!SR)return toast('Speech recognition needs Chrome, Edge or Safari');const r=new SR();r.lang='en-US';r.interimResults=false;
+ r.onstart=()=>{btn&&(btn.textContent='🔴 Listening…')};r.onend=()=>{btn&&(btn.textContent=btn.dataset.l)};
+ r.onerror=e=>toast(e.error==='not-allowed'?'Microphone permission denied':'Mic error: '+e.error);r.onresult=e=>cb(e.results[0][0].transcript);r.start()}
+
+// ---------- Shell ----------
+const NAV=[['dash','🏠 Dashboard'],['tutor','💬 AI Tutor'],['practice','🎭 Practice'],['vocab','📚 Vocabulary'],['grammar','🧩 Grammar'],['games','🎮 Games'],['progress','📈 Progress'],['settings','⚙️ Settings']];
+function go(v){view=v;render()}
+function render(){document.documentElement.dataset.theme=S.set.theme;
+ if(!S.profile)return onboard();
+ $('#nav').innerHTML='<h1>🦜 Paswig English</h1>'+NAV.map(([k,l])=>`<button class="${k===view?'on':''}" onclick="go('${k}')">${l}</button>`).join('');
+ $('#main').innerHTML=(AI.ready?'':err('Connecting to Claude… If this stays, open the page in claude.ai and allow access.'))+'<div id="v"></div>';
+ ({dash,tutor,practice,vocab,grammar,games,progress,settings})[view]()}
+const V=h=>$('#v').innerHTML=h;
+
+// ---------- Onboarding + placement test ----------
+const PT=[['She ___ to school every day.',['go','goes','going','gone'],1,'A1'],['I ___ a book now.',['read','am reading','reads','have read'],1,'A1'],['There ___ two apples on the table.',['is','are','be','am'],1,'A1'],['I have lived here ___ 2019.',['for','since','from','at'],1,'A2'],['If it rains, we ___ at home.',['stay','will stay','stayed','would stay'],1,'A2'],['He asked me where ___.',['do I live','I lived','I live','did I live'],2,'B1'],['She suggested ___ early.',['to leave','leaving','leave','left'],1,'B1'],['If I ___ you, I would apologise.',['am','was','were','be'],2,'B2'],['No sooner ___ arrived than it started to rain.',['I had','had I','I have','have I'],1,'B2'],['"It\'s a piece of cake" means it is…',['very easy','delicious','expensive','dangerous'],0,'B1'],['Hardly ___ any money left after the trip.',['we had','had we','we have','did we had'],1,'C1']];
+function onboard(){let p={nick:'',level:'A1',goal:'Daily conversation',dailyGoal:15};
+ $('#ov').innerHTML=`<div class="ov"><div class="card"><h2>🦜 Welcome to Paswig English</h2><p class="mu">Your private AI English tutor. Selamat datang! Isi dulu ya.</p>
+ <label class="mu">Nickname</label><input id="nn" maxlength="20" placeholder="e.g. Rizky"><br><br>
+ <label class="mu">Learning goal</label><select id="gl"><option>Daily conversation</option><option>Study / college</option><option>Job interview & career</option><option>Traveling abroad</option><option>Gaming & internet culture</option></select><br><br>
+ <label class="mu">Daily goal (minutes)</label><select id="dg"><option>10</option><option selected>15</option><option>30</option><option>45</option></select><br><br>
+ <label class="mu">Your level</label><div class="row" id="lvs">${LV.map(l=>`<button class="chip ${l==='A1'?'on':''}" data-l="${l}">${l} · ${LVN[l]}</button>`).join('')}</div>
+ <p class="mu">Not sure? <a href="#" id="pt" style="color:var(--ac2)">Take the placement test (2 min)</a></p><button class="pri" id="go" style="width:100%">Start learning →</button></div></div>`;
+ $('#lvs').onclick=e=>{if(!e.target.dataset.l)return;p.level=e.target.dataset.l;document.querySelectorAll('#lvs button').forEach(b=>b.classList.toggle('on',b===e.target))};
+ const fin=()=>{const n=$('#nn').value.trim();if(!n)return toast('Please enter a nickname');S.profile={nick:n,level:p.level,goal:$('#gl').value,dailyGoal:+$('#dg').value,since:today()};save();$('#ov').innerHTML='';render()};
+ $('#go').onclick=fin;
+ $('#pt').onclick=e=>{e.preventDefault();let i=0,sc=0,top=0;const q=()=>{if(i>=PT.length){const lv=sc<=2?'A1':sc<=4?'A2':sc<=7?'B1':sc<=9?'B2':'C1';$('#ov').querySelector('.card').innerHTML=`<h2>Result: ${lv} — ${LVN[lv]}</h2><p>You got ${sc}/${PT.length}. We set this as your level; you can change it anytime in Settings.</p><button class="pri" id="ok">Continue</button>`;$('#ok').onclick=()=>{p.level=lv;const nn=$('#nn')?.value;onboard();$('#nn').value=nn||'';document.querySelectorAll('#lvs button').forEach(b=>b.classList.toggle('on',b.dataset.l===lv))};return}
+  const [t,o,a]=PT[i];$('#ov').querySelector('.card').innerHTML=`<div class="bar"><i style="width:${i/PT.length*100}%"></i></div><h3>Q${i+1}/${PT.length}</h3><p>${esc(t)}</p>`+o.map((x,j)=>`<button class="opt" data-j="${j}">${esc(x)}</button>`).join('');
+  document.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{if(+b.dataset.j===a)sc++;i++;q()})};q()}}
+
+// ---------- Dashboard ----------
+function dash(){const t=S.days[today()]||{xp:0,min:0},pct=Math.min(100,t.min/S.profile.dailyGoal*100);const h=new Date().getHours();
+ const L=S.profile.level,rec=[['💬','Chat with your tutor','Free conversation at '+L,"go('tutor')"],['📚','Learn new words','AI picks words for '+L,"go('vocab')"],['🧩','Grammar: '+(S.gram.c/Math.max(1,S.gram.t)<.7?'review basics':'next topic'),'Short lessons + exercises',"go('grammar')"],['🎮','Quick quiz','Earn XP and badges',"go('games')"]];
+ V(`<h2>${h<11?'Good morning':h<18?'Hello':'Good evening'}, ${esc(S.profile.nick)}! 👋</h2><p class="mu">Level ${L} · ${LVN[L]} — ${esc(S.profile.goal)}</p>
+ <div class="card"><div class="row" style="justify-content:space-between"><b>Daily goal</b><span class="mu">${Math.round(t.min)} / ${S.profile.dailyGoal} min</span></div><div class="bar"><i style="width:${pct}%"></i></div><br><button class="pri" onclick="go('tutor')">▶ Start Learning</button></div>
+ <div class="grid"><div class="card stat">🔥<b>${S.streak}</b><span class="mu">day streak</span></div><div class="card stat">📚<b>${S.words.filter(w=>w.box>=3).length}/${S.words.length}</b><span class="mu">words mastered / learned</span></div><div class="card stat">⭐<b>${S.xp}</b><span class="mu">XP · Level ${lvl()}</span></div><div class="card stat">🎯<b>${Math.round(S.gram.c/Math.max(1,S.gram.t)*100)}%</b><span class="mu">grammar accuracy</span></div></div>
+ <div class="card"><b>English progress</b><div class="row" style="margin-top:8px">${LV.map(l=>`<span class="tag" style="${l===L?'background:var(--ac);color:#fff':''}">${l}</span>`).join('')}</div><div class="bar" style="margin-top:8px"><i style="width:${(LV.indexOf(L)+1)*20-10+Math.min(10,S.xp/100)}%"></i></div></div>
+ <h3>Recommended for you</h3><div class="grid">${rec.map(r=>`<div class="card clk" onclick="${r[3]||r[3]}">${r[0]} <b>${r[1]}</b><div class="mu">${r[2]}</div></div>`).join('')}</div>
+ <h3>Recent activity</h3><div class="card">${S.history.length?S.history.slice(-3).reverse().map(h=>`<div>💬 ${esc(h.title)} <span class="mu">· ${h.date} · ${h.n} messages</span></div>`).join(''):'<span class="mu">No conversations yet — start your first chat!</span>'}</div>`)}
+// fix rec handler (strings)
+const _dash=dash;dash=function(){_dash();document.querySelectorAll('.clk').forEach((e,i)=>{const t=['tutor','vocab','grammar','games'][i];e.onclick=()=>go(t)})};
+
+// ---------- Tutor & Practice ----------
+const SC=[['Daily conversation','Daily conversation: you are a friendly person chatting about everyday life.'],['Talking with friends','Role-play: you are a close friend of the learner, chatting casually.'],['Ordering at a café','Role-play: you are a barista at a busy café; the learner is a customer.'],['Shopping','Role-play: you are a shop assistant in a clothing store.'],['College life','Role-play: you are a classmate talking about classes, assignments and campus life.'],['Job interview','Role-play: you are an HR interviewer interviewing the learner for a job.'],['Traveling abroad','Role-play: you are an airport/hotel staff member helping a traveler abroad.'],['Online gaming','Role-play: you are a teammate in an online game, using casual gamer English.'],['Hobbies','Role-play: you are curious about the learner\'s hobbies and share your own.'],['Native speaker chat','Role-play: you are a native English speaker (American) meeting the learner casually; use natural slang and idioms.']];
+function practice(){V(`<h2>🎭 English Conversation Practice</h2><p class="mu">Pick a situation. The AI plays the role; you reply in English.</p><div class="grid">${SC.map((s,i)=>`<div class="card clk" onclick="startChat(${i})"><b>${s[0]}</b><div class="mu">Role-play · ${S.profile.level}</div></div>`).join('')}</div>`)}
+function startChat(i){chat={sc:i==null?null:SC[i],msgs:[],busy:0};view='tutor';render();if(i!=null)send('[start]',true)}
+const cfg=()=>({nick:S.profile.nick,level:S.profile.level,goal:S.profile.goal,style:S.set.style,explain:S.set.explain,corr:S.set.corr,scenario:chat.sc?chat.sc[1]:''});
+function tutor(){if(!chat)chat={sc:null,msgs:[],busy:0};
+ V(`<div class="row" style="justify-content:space-between"><h2 style="margin:0">💬 ${chat.sc?chat.sc[0]:'AI English Tutor'}</h2><div class="row"><select id="ts" style="width:auto"><option value="friendly">Friendly Tutor</option><option value="strict">Strict Teacher</option><option value="native">Native Partner</option><option value="beginner">Beginner Tutor</option></select><select id="cm" style="width:auto"><option value="instant">Instant Correction</option><option value="after">Correction After Chat</option></select></div></div>
+ <div class="card" style="margin-top:12px"><div id="chat"></div><div id="st"></div>
+ <div class="row" style="margin-top:8px"><textarea id="in" rows="2" placeholder="Type in English… (Enter to send)" style="flex:1"></textarea><button class="pri" id="sd">Send</button><button id="mic" data-l="🎤 Speak">🎤 Speak</button></div>
+ <div class="row" style="margin-top:8px"><button onclick="startChat(null)">+ New chat</button><button onclick="endChat()">📝 End & Review</button><span class="mu">Speed</span><select id="sp" style="width:auto">${[.7,.85,1,1.15].map(x=>`<option ${x==S.set.speed?'selected':''}>${x}</option>`).join('')}</select></div></div><div id="rv"></div>`);
+ $('#ts').value=S.set.style;$('#cm').value=S.set.corr;$('#ts').onchange=e=>{S.set.style=e.target.value;save()};$('#cm').onchange=e=>{S.set.corr=e.target.value;save()};$('#sp').onchange=e=>{S.set.speed=+e.target.value;save()};
+ $('#sd').onclick=()=>{const v=$('#in').value.trim();if(v){$('#in').value='';send(v)}};$('#in').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('#sd').click()}};
+ $('#mic').onclick=e=>listen(t=>{$('#in').value=t;$('#sd').click()},e.target);drawChat();
+ if(!chat.msgs.length)$('#chat').innerHTML=`<div class="m a">Hi ${esc(S.profile.nick)}! 👋 I'm Paswig, your English tutor. Say hello, ask me anything, or pick a scenario in Practice. Halo! Kamu boleh tanya dalam bahasa Indonesia juga.</div>`}
+function drawChat(){const c=$('#chat');if(!c||!chat.msgs.length)return;c.innerHTML=chat.msgs.filter(m=>m.c!=='[start]').map((m,i)=>m.role==='user'?`<div class="m u">${esc(m.c)}</div>`+(m.fix?`<div class="fix"><div class="ok">✔ ${esc(m.fix.corrected)}</div><div>✨ ${esc(m.fix.natural)}</div><div class="mu">${esc(m.fix.why_id)}</div>${(m.fix.vocab||[]).map(v=>`<span class="tag" onclick="saveW('${esc(v.word).replace(/'/g,'')}','${esc(v.meaning).replace(/'/g,'')}')" style="cursor:pointer">＋ ${esc(v.word)} = ${esc(v.meaning)}</span> `).join('')}</div>`:''):`<div class="m a">${esc(m.c)}<div class="row" style="margin-top:6px"><button onclick="speak(chat.msgs[${chat.msgs.indexOf(m)}].c)">🔊 Listen</button><button onclick="shadow(${chat.msgs.indexOf(m)},this)">🗣 Shadow</button></div></div>`).join('');c.scrollTop=c.scrollHeight}
+async function send(text,hidden){if(chat.busy)return;if(!AI.ready)return toast('AI not ready yet');const m={role:'user',c:text};chat.msgs.push(m);drawChat();chat.busy=1;
+ $('#st')&&($('#st').innerHTML=load('Paswig is typing…'));
+ try{const d=await api('/api/chat',{config:cfg(),messages:chat.msgs.map(x=>({role:x.role,content:x.c}))});
+  if(d.correction&&!hidden)m.fix=d.correction;chat.msgs.push({role:'assistant',c:d.reply});
+  if(!hidden){act(5);if(d.correction)(d.correction.vocab||[]).length&&0;if(d.suggest_level&&d.suggest_level!==S.profile.level)toast('Tutor thinks you may be ready for '+d.suggest_level+' — check Settings')}
+  if(view==='tutor'){drawChat();$('#st').innerHTML=''}}
+ catch(e){chat.msgs.pop();view==='tutor'&&($('#st').innerHTML=err(e.message)+`<button onclick="send(${JSON.stringify(text).replace(/"/g,'&quot;')})">Retry</button>`)}
+ chat.busy=0}
+function shadow(i,btn){const t=chat.msgs[i].c.split(/(?<=[.!?])\s/)[0];speak(t);toast('Listen, then repeat the sentence');setTimeout(()=>listen(r=>{const a=t.toLowerCase().replace(/[^a-z' ]/g,'').split(' '),b=new Set(r.toLowerCase().replace(/[^a-z' ]/g,'').split(' '));const p=Math.round(a.filter(w=>b.has(w)).length/a.length*100);alert(`You said: "${r}"\nTarget: "${t}"\nMatch: ${p}%`+(p>=80?' 🎉':' — try again!'));act(p>=80?10:3)}),2500+t.length*60)}
+async function endChat(){if(!chat||chat.msgs.length<3)return toast('Chat a bit more first');$('#rv').innerHTML=`<div class="card">${load('Preparing your review…')}</div>`;
+ try{const tr=chat.msgs.filter(m=>m.c!=='[start]').map(m=>(m.role==='user'?'user: ':'tutor: ')+m.c).join('\n');const r=await gen('review',{transcript:tr});
+  S.history.push({title:chat.sc?chat.sc[0]:'Free chat',date:today(),n:chat.msgs.length,score:r.score,msgs:chat.msgs.slice(-12)});act(20);save();
+  $('#rv').innerHTML=`<div class="card"><h3>📝 Review · ${r.score}/100</h3><p>${esc(r.summary_id)}</p>${(r.mistakes||[]).map(x=>`<div class="fix" style="margin-left:0;max-width:100%"><div class="bad">✗ ${esc(x.original)}</div><div class="ok">✔ ${esc(x.corrected)}</div><div>✨ ${esc(x.natural)}</div><div class="mu">${esc(x.why_id)}</div></div>`).join('')}<div>${(r.new_vocab||[]).map(v=>`<span class="tag" style="cursor:pointer" onclick="saveW('${esc(v.word).replace(/'/g,'')}','${esc(v.meaning).replace(/'/g,'')}')">＋ ${esc(v.word)} = ${esc(v.meaning)}</span> `).join('')}</div><p>💡 ${esc(r.next_tip_id)}</p><button class="pri" onclick="startChat(null)">Continue / new chat</button></div>`}
+ catch(e){$('#rv').innerHTML=err(e.message)}}
+function saveW(word,meaning){if(S.words.some(w=>w.word.toLowerCase()===word.toLowerCase()))return toast('Already saved');S.words.push({word,meaning,pron:'',example:'',example_id:'',synonyms:[],antonyms:[],formality:'',context:'',box:1,due:today()});save();act(2);toast('Saved: '+word)}
+
+// ---------- Vocabulary ----------
+const CATS=['Everyday expressions','Casual English','Slang','Internet slang','Idioms','Phrasal verbs','Academic English'];
+let vt='learn',vc=CATS[0],vitems=null,fc={i:0,flip:0};
+function vocab(){const tabs=[['learn','Learn'],['saved','Saved ('+S.words.length+')'],['cards','Flashcards'],['quiz','Quiz'],['cmp','Compare words']];
+ V(`<h2>📚 Vocabulary Builder</h2><div class="row">${tabs.map(t=>`<button class="chip ${vt===t[0]?'on':''}" onclick="vt='${t[0]}';vocab()">${t[1]}</button>`).join('')}</div><br><div id="vb"></div>`);({learn:vLearn,saved:vSaved,cards:vCards,quiz:vQuiz,cmp:vCmp})[vt]()}
+const wcard=(w,btn)=>`<div class="card"><div class="row" style="justify-content:space-between"><b style="font-size:19px">${esc(w.word)}</b><span class="tag">${esc(w.formality||'')}</span></div><div class="mu">${esc(w.pron)}</div><div>🇮🇩 ${esc(w.meaning)}</div>${w.example?`<div>“${esc(w.example)}” <span class="mu">${esc(w.example_id)}</span></div>`:''}${(w.synonyms||[]).length?`<div class="mu">≈ ${esc(w.synonyms.join(', '))} ${(w.antonyms||[]).length?'· ≠ '+esc(w.antonyms.join(', ')):''}</div>`:''}<div class="mu">${esc(w.context)}</div><div class="row" style="margin-top:6px"><button onclick="speak('${esc(w.word).replace(/'/g,"\\'")}')">🔊</button>${btn}</div></div>`;
+function vLearn(){$('#vb').innerHTML=`<div class="row">${CATS.map(c=>`<button class="chip ${c===vc?'on':''}" onclick="vc='${c}';vitems=null;vLearn()">${c}</button>`).join('')}</div><br><button class="pri" id="gw">✨ Generate words (${S.profile.level})</button><div id="wl"></div>`;
+ const show=()=>$('#wl').innerHTML=(vitems||[]).map((w,i)=>wcard(w,`<button onclick="saveW2(${i})">⭐ Save Word</button>`)).join('');show();
+ $('#gw').onclick=async()=>{if(!AI.ready)return toast('AI not ready');$('#wl').innerHTML=load('Generating…');try{vitems=(await gen('vocab',{category:vc,n:5})).items;show()}catch(e){$('#wl').innerHTML=err(e.message)}}}
+function saveW2(i){const w=vitems[i];if(S.words.some(x=>x.word===w.word))return toast('Already saved');S.words.push({...w,box:1,due:today()});save();act(3);toast('Saved ⭐')}
+function vSaved(){$('#vb').innerHTML=S.words.map((w,i)=>wcard(w,`<button onclick="S.words.splice(${i},1);save();vocab()">🗑 Remove</button>`)).join('')||'<div class="card mu">No saved words yet.</div>'}
+function vCards(){const due=S.words.filter(w=>w.due<=today());if(!due.length)return $('#vb').innerHTML='<div class="card">🎉 No cards due today! Come back tomorrow, or add more words.</div>';
+ const w=due[0],b=$('#vb');b.innerHTML=`<div class="mu">${due.length} due · spaced repetition (Box ${w.box}/5)</div><div class="card fc" id="fcd">${fc.flip?`<b>${esc(w.meaning)}</b><div class="mu">${esc(w.example)}</div>`:`<b>${esc(w.word)}</b><div class="mu">${esc(w.pron)}</div>`}<div class="mu">tap to flip</div></div>${fc.flip?`<div class="row"><button style="background:var(--bad);color:#fff" onclick="rate(0)">Again</button><button onclick="rate(1)">Good</button><button style="background:var(--ok);color:#042">Easy</button></div>`:''}`;
+ $('#fcd').onclick=()=>{fc.flip=!fc.flip;if(fc.flip)speak(w.word);vCards()};const ev=b.querySelectorAll('.row button');if(ev[2])ev[2].onclick=()=>rate(2)}
+function rate(r){const w=S.words.filter(w=>w.due<=today())[0];w.box=r===0?1:Math.min(5,w.box+(r===2?2:1));w.due=today([0,1,3,7,14,30][w.box]*(r===0?0:1)+(r===0?1:0));fc.flip=0;act(2);save();vCards()}
+function vQuiz(){if(S.words.length<4)return $('#vb').innerHTML='<div class="card">Save at least 4 words first.</div>';const ws=[...S.words].sort(()=>Math.random()-.5).slice(0,5);
+ runMCQ(ws.map(w=>{const o=[w.meaning,...S.words.filter(x=>x!==w).sort(()=>Math.random()-.5).slice(0,3).map(x=>x.meaning)].sort(()=>Math.random()-.5);return{q:`What does “${w.word}” mean?`,options:o,answer:o.indexOf(w.meaning),why:`“${w.word}” = ${w.meaning}. ${w.example?'Example: '+w.example:''}`}}),'vocab',$('#vb'))}
+async function vCmp(){$('#vb').innerHTML=`<p class="mu">Compare similar words (e.g. tired, exhausted, sleepy, worn out)</p><div class="row"><input id="cw" value="tired, exhausted, sleepy, worn out" style="flex:1"><button class="pri" id="cb">Compare</button></div><div id="co"></div>`;
+ $('#cb').onclick=async()=>{if(!AI.ready)return toast('AI not ready');$('#co').innerHTML=load();try{const r=await gen('compare',{words:$('#cw').value});$('#co').innerHTML=r.items.map(i=>`<div class="card"><b>${esc(i.word)}</b> — ${esc(i.meaning)}<div class="mu">${esc(i.nuance)}</div><div>“${esc(i.example)}”</div></div>`).join('')+`<div class="card">💡 ${esc(r.tip)}</div>`}catch(e){$('#co').innerHTML=err(e.message)}}}
+
+// ---------- Generic MCQ runner (quiz, grammar exercises, games) ----------
+function runMCQ(items,type,el,after){let i=0,sc=0;const q=()=>{if(i>=items.length){const xp=sc*10;act(xp);S.quiz.done++;S.quiz.right+=sc;const bt=S.quiz.byType[type]=S.quiz.byType[type]||{c:0,t:0};bt.c+=sc;bt.t+=items.length;save();
+  el.innerHTML=`<div class="card"><h2>🎉 ${sc}/${items.length} correct</h2><p>+${xp} XP</p><button class="pri" onclick="${after||'go(view)'}">Continue</button></div>`;return}
+ const it=items[i];el.innerHTML=`<div class="card"><div class="bar"><i style="width:${i/items.length*100}%"></i></div><p class="mu">Question ${i+1}/${items.length}</p>${it.passage?`<div class="card" style="background:var(--c2)">${esc(it.passage)}</div>`:''}${it.audio?`<button class="pri" id="pa">🔊 Play audio</button>`:''}<h3>${esc(it.q)}</h3>${it.options.map((o,j)=>`<button class="opt" data-j="${j}">${esc(o)}</button>`).join('')}<div id="fb"></div></div>`;
+ if(it.audio){$('#pa').onclick=()=>speak(it.audio);speak(it.audio)}
+ el.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{const j=+b.dataset.j,ok=j===it.answer;el.querySelectorAll('.opt').forEach((x,k)=>{x.disabled=true;if(k===it.answer)x.classList.add('right')});if(!ok)b.classList.add('wrong');if(ok)sc++;
+  if(type==='grammar'){S.gram.t++;ok&&S.gram.c++;save()}
+  $('#fb').innerHTML=`<p class="${ok?'ok':'bad'}">${ok?'✔ Correct! +10 XP':'✗ Not quite.'}</p><p>${esc(it.why)}</p><button class="pri" id="nx">${i+1<items.length?'Next →':'Finish'}</button>`;$('#nx').onclick=()=>{i++;q()}})};q()}
+
+// ---------- Grammar ----------
+const GT=['Tenses (present simple vs continuous)','Past simple vs present perfect','Future forms (will vs going to)','Sentence structure','Subject-verb agreement','Articles (a, an, the)','Prepositions of time and place','Pronouns','Modal verbs (can, should, must)','Conditional sentences','Common grammar mistakes of Indonesian speakers'];
+function grammar(){V(`<h2>🧩 Grammar Coach</h2><p class="mu">Simple explanations, everyday examples, practice and answer explanations.</p><div class="grid">${GT.map((t,i)=>`<div class="card clk" onclick="lesson(${i})"><b>${t}</b><div class="mu">${S.gram.topics[t]?'✔ done '+S.gram.topics[t]+'/5':'Start'}</div></div>`).join('')}</div>`)}
+async function lesson(i){const t=GT[i];V(`<button onclick="go('grammar')">← Back</button><h2>${t}</h2><div id="gl">${load('Preparing your lesson…')}</div>`);
+ try{const d=await gen('grammar',{topic:t});$('#gl').innerHTML=`<div class="card">${esc(d.explain_id)}<ul>${(d.rules||[]).map(r=>`<li>${esc(r)}</li>`).join('')}</ul></div><div class="card"><b class="ok">✔ Correct</b>${d.right.map(r=>`<div>${esc(r)}</div>`).join('')}<br><b class="bad">✗ Common mistakes</b>${d.wrong.map(w=>`<div><span class="bad">${esc(w.wrong)}</span> → <span class="ok">${esc(w.right)}</span><div class="mu">${esc(w.why)}</div></div>`).join('')}</div><h3>Practice</h3><div id="ex"></div>`;
+  window._gt=t;runMCQ(d.exercises,'grammar',$('#ex'),"S.gram.topics[window._gt]=5;save();go('grammar')")}catch(e){$('#gl').innerHTML=err(e.message)}}
+
+// ---------- Games ----------
+const GM=[['vocab','🎯 Vocabulary quiz'],['blank','✏️ Fill in the blanks'],['correct','🛠 Sentence correction'],['meaning','🤔 Guess the meaning'],['natural','💬 Natural response'],['reading','📖 Reading'],['listening','🎧 Listening'],['build','🧱 Build a sentence'],['match','🔗 Word matching']];
+function badges(){const b=[];S.xp>=50&&b.push('🌱 First 50 XP');S.xp>=500&&b.push('🚀 500 XP');S.streak>=3&&b.push('🔥 3-day streak');S.streak>=7&&b.push('🏆 7-day streak');S.words.length>=10&&b.push('📚 Word collector');S.quiz.done>=5&&b.push('🎮 Quiz regular');return b}
+function games(){V(`<h2>🎮 Quiz & Mini Games</h2><div class="row">${badges().map(b=>`<span class="tag">${b}</span>`).join('')||'<span class="mu">Earn badges by playing!</span>'}</div><br><div class="grid">${GM.map(g=>`<div class="card clk" onclick="play('${g[0]}')"><b>${g[1]}</b><div class="mu">+10 XP per correct answer</div></div>`).join('')}</div>`)}
+async function play(t){if(t==='match')return match();if(!AI.ready)return toast('AI not ready');V(`<button onclick="go('games')">← Back</button><div id="pg">${load('Creating questions…')}</div>`);
+ try{if(t==='build')return build((await gen('build',{n:4})).items);const r=await gen('quiz',{type:t,n:5});runMCQ(r.items,t,$('#pg'),"go('games')")}catch(e){$('#pg').innerHTML=err(e.message)}}
+function build(items){let i=0,sc=0;const q=()=>{if(i>=items.length){act(sc*10);S.quiz.done++;save();return $('#pg').innerHTML=`<div class="card"><h2>${sc}/${items.length} correct · +${sc*10} XP</h2><button class="pri" onclick="go('games')">Done</button></div>`}
+ const it=items[i],ws=it.sentence.split(' ').sort(()=>Math.random()-.5);let pick=[];const draw=()=>{$('#pg').innerHTML=`<div class="card"><p class="mu">Build this sentence:</p><h3>${esc(it.id)}</h3><div class="card" style="background:var(--c2);min-height:50px">${pick.map(w=>esc(w)).join(' ')}</div><div class="row">${ws.map((w,j)=>`<button class="chip" data-j="${j}" ${pick.includes(j)?'disabled':''}>${esc(w)}</button>`).join('')}</div><br><div class="row"><button id="rs">Reset</button><button class="pri" id="ck">Check</button></div><div id="fb"></div></div>`;
+  $('#pg').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{pick.push(+b.dataset.j);draw()});$('#rs').onclick=()=>{pick=[];draw()};
+  $('#ck').onclick=()=>{const a=pick.map(j=>ws[j]).join(' '),ok=a.replace(/[.,!?]/g,'').toLowerCase()===it.sentence.replace(/[.,!?]/g,'').toLowerCase();if(ok)sc++;$('#fb').innerHTML=`<p class="${ok?'ok':'bad'}">${ok?'✔ Correct!':'✗ Answer: '+esc(it.sentence)}</p><button class="pri" id="nx">Next</button>`;$('#nx').onclick=()=>{i++;q()}}};draw()};q()}
+function match(){const ws=[...S.words].sort(()=>Math.random()-.5).slice(0,5);if(ws.length<3)return toast('Save more words first');let sel=null,done=0;const R=[...ws].sort(()=>Math.random()-.5);
+ V(`<button onclick="go('games')">← Back</button><h2>Word matching</h2><div class="grid"><div id="l">${ws.map(w=>`<button class="opt" data-w="${esc(w.word)}">${esc(w.word)}</button>`).join('')}</div><div id="r">${R.map(w=>`<button class="opt" data-m="${esc(w.word)}">${esc(w.meaning)}</button>`).join('')}</div></div><div id="fb"></div>`);
+ document.querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>{if(b.disabled)return;document.querySelectorAll('[data-w]').forEach(x=>x.style.outline='');b.style.outline='2px solid var(--ac)';sel=b});
+ document.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{if(!sel||b.disabled)return;if(sel.dataset.w===b.dataset.m){sel.classList.add('right');b.classList.add('right');sel.disabled=b.disabled=true;sel.style.outline='';sel=null;if(++done===ws.length){act(done*8);$('#fb').innerHTML=`<p class="ok">🎉 All matched! +${done*8} XP</p>`}}else{b.classList.add('wrong');setTimeout(()=>b.classList.remove('wrong'),500);$('#fb').innerHTML=`<p class="bad">Not that one — check “${esc(sel.dataset.w)}” again.</p>`}})}
+
+// ---------- Progress ----------
+function progress(){const d=[...Array(7)].map((_,i)=>{const k=today(i-6);return[k.slice(5),Math.round((S.days[k]||{}).min||0)]}),mx=Math.max(10,...d.map(x=>x[1]));
+ const acc=S.quiz.done?Math.round(S.quiz.right/(S.quiz.done*5)*100):0,ga=Math.round(S.gram.c/Math.max(1,S.gram.t)*100),rec=[];
+ if(S.gram.t&&ga<70)rec.push('Grammar accuracy is '+ga+'% — review a basic topic in Grammar Coach.');if(S.words.filter(w=>w.due<=today()).length)rec.push('You have flashcards due today.');if(!S.history.length)rec.push('Start a conversation in Practice — speaking is the fastest way to improve.');if(!rec.length)rec.push('Great work! Try a '+LV[Math.min(4,LV.indexOf(S.profile.level)+1)]+' scenario or a Reading quiz.');
+ V(`<h2>📈 Progress</h2><div class="grid"><div class="card stat">⏱<b>${sumMin()} min</b><span class="mu">total study time</span></div><div class="card stat">🔥<b>${S.streak}</b><span class="mu">daily streak</span></div><div class="card stat">📚<b>${S.words.filter(w=>w.box>=3).length}</b><span class="mu">words mastered</span></div><div class="card stat">🎮<b>${acc}%</b><span class="mu">quiz accuracy</span></div><div class="card stat">🧩<b>${ga}%</b><span class="mu">grammar accuracy</span></div><div class="card stat">⭐<b>L${lvl()}</b><span class="mu">${S.xp} XP · ${LV.indexOf(S.profile.level)>=0?S.profile.level:''}</span></div></div>
+ <div class="card"><b>Last 7 days (minutes)</b><div class="bars">${d.map(x=>`<div><i style="height:${x[1]/mx*70}px"></i>${x[0]}<br>${x[1]}</div>`).join('')}</div></div>
+ <div class="card"><b>Next recommendations</b>${rec.map(r=>`<div>👉 ${r}</div>`).join('')}</div>
+ <div class="card"><b>Conversation history</b>${S.history.slice().reverse().map(h=>`<details><summary>${esc(h.title)} · ${h.date} · score ${h.score??'-'}</summary>${(h.msgs||[]).map(m=>`<div class="mu">${m.role==='user'?'You':'Tutor'}: ${esc(m.c)}</div>`).join('')}</details>`).join('')||'<span class="mu">Empty — start chatting!</span>'}</div>`)}
+
+// ---------- Settings ----------
+function settings(){const s=S.set,p=S.profile;V(`<h2>⚙️ Settings</h2><div class="card"><label class="mu">Nickname</label><input id="n" value="${esc(p.nick)}"><br><br><label class="mu">Level</label><select id="l">${LV.map(l=>`<option ${l===p.level?'selected':''} value="${l}">${l} — ${LVN[l]}</option>`).join('')}</select><br><br><label class="mu">Explanation language</label><select id="e"><option value="id">Indonesian</option><option value="en">English only</option><option value="both">Both</option></select><br><br><label class="mu">Theme</label><select id="t"><option value="dark">Dark</option><option value="light">Light</option></select><br><br><label class="mu">Daily goal (min)</label><input id="g" type="number" min="5" max="180" value="${p.dailyGoal}"><br><br><button class="pri" id="sv">Save</button> <button id="rs" style="color:var(--bad)">Reset all data</button></div>
+ <div class="card mu">AI status: ${AI.ready?'✅ connected ('+esc(AI.model)+')':'❌ not configured'}<br>Voice: ${SR?'✅ speech recognition':'❌ speech recognition (use Chrome/Edge/Safari)'} · ${'speechSynthesis' in window?'✅ text-to-speech':'❌ TTS'}</div>`);
+ $('#e').value=s.explain;$('#t').value=s.theme;$('#sv').onclick=()=>{p.nick=$('#n').value.trim()||p.nick;p.level=$('#l').value;s.explain=$('#e').value;s.theme=$('#t').value;p.dailyGoal=+$('#g').value||15;save();toast('Saved');render()};
+ $('#rs').onclick=()=>{if(confirm('Delete all progress?')){localStorage.removeItem('paswig_v1');location.reload()}}}
+
+
+/* ===== Public deployment build: AI requests go through the private server API ===== */
+async function api(path, body){
+  let r;
+  try { r = await fetch(path, { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify(body) }); }
+  catch { throw new Error('Tidak bisa terhubung ke server. Coba lagi sebentar.'); }
+  const d = await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.error || `Request failed (${r.status})`);
+  return d;
+}
+async function checkAI(){
+  try {
+    const r = await fetch('/api/health');
+    const d = await r.json();
+    AI = {ready: !!d.ready, model: d.model || 'AI Tutor'};
+  } catch { AI = {ready:false, model:'Unavailable'}; }
+  render();
+}
+checkAI();

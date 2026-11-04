@@ -1,0 +1,7 @@
+{
+  "name": "paswig-english",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Paswig English - AI English tutor for Indonesian learners",
+  "engines": { "node": ">=18" }
+}
