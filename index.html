@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Paswig English — your AI English tutor</title>
+<meta name="description" content="Paswig English — a private AI English tutor for Indonesian learners: conversation practice, vocabulary, grammar and games.">
+<meta name="theme-color" content="#0f1020">
 <style>
 :root{--bg:#0f1020;--card:#1a1b33;--c2:#232445;--tx:#ecebff;--mu:#9a9bc4;--ac:#8b7bff;--ac2:#5ec4ff;--ok:#4ade80;--bad:#fb7185;--bd:#2f3058}
 [data-theme=light]{--bg:#f4f3ff;--card:#fff;--c2:#ece9ff;--tx:#1d1b3a;--mu:#6b6a93;--bd:#ddd9f7}
@@ -48,8 +50,6 @@ function act(xp=0){const t=today();S.days[t]=S.days[t]||{xp:0,min:0};S.days[t].x
  if(S.last!==t){S.streak=S.last===today(-1)?S.streak+1:1;S.last=t}save()}
 setInterval(()=>{if(document.hidden||!S.profile)return;const t=today();S.days[t]=S.days[t]||{xp:0,min:0};S.days[t].min+=.5;save()},30000);
 const lvl=()=>Math.floor(S.xp/200)+1,sumMin=()=>Math.round(Object.values(S.days).reduce((a,d)=>a+d.min,0));
-async function api(path,body){let r;try{r=await fetch(path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)})}catch{throw new Error('Cannot reach the server. Is it running? / Server tidak terjangkau.')}
- const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Request failed ('+r.status+')');return d}
 const gen=(task,params)=>api('/api/generate',{task,params:{level:S.profile.level,...params}});
 const err=m=>`<div class="banner">⚠️ ${esc(m)}</div>`,load=t=>`<div class="mu"><span class="spin"></span> ${t||'Thinking…'}</div>`;
 
@@ -66,7 +66,7 @@ function go(v){view=v;render()}
 function render(){document.documentElement.dataset.theme=S.set.theme;
  if(!S.profile)return onboard();
  $('#nav').innerHTML='<h1>🦜 Paswig English</h1>'+NAV.map(([k,l])=>`<button class="${k===view?'on':''}" onclick="go('${k}')">${l}</button>`).join('');
- $('#main').innerHTML=(AI.ready?'':err('Connecting to Claude… If this stays, open the page in claude.ai and allow access.'))+'<div id="v"></div>';
+ $('#main').innerHTML=(AI.ready?'':AI.checked?err('AI tutor is not configured yet. Lessons that need AI are unavailable; saved words, flashcards and word matching still work.'):`<div class="card">${load('Connecting to AI tutor…')}</div>`)+'<div id="v"></div>';
  ({dash,tutor,practice,vocab,grammar,games,progress,settings})[view]()}
 const V=h=>$('#v').innerHTML=h;
 
@@ -207,10 +207,13 @@ async function api(path, body){
 }
 async function checkAI(){
   try {
-    const r = await fetch('/api/health');
+    const r = await fetch('/api/health', {cache:'no-store'});
     const d = await r.json();
-    AI = {ready: !!d.ready, model: d.model || 'AI Tutor'};
-  } catch { AI = {ready:false, model:'Unavailable'}; }
+    AI = {ready: !!d.ready, model: d.model || 'AI Tutor', checked: true};
+  } catch { AI = {ready:false, model:'Unavailable', checked: true}; }
   render();
 }
 checkAI();
+</script>
+</body>
+</html>
